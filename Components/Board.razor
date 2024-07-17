@@ -1,0 +1,107 @@
+@using System.Drawing
+@inject GameState State
+
+<HeadContent>
+    <style>
+        :root {
+            --board-bg: @ColorTranslator.ToHtml(BoardColor);
+            --player1: @ColorTranslator.ToHtml(Player1Color);
+            --player2: @ColorTranslator.ToHtml(Player2Color);
+        }
+    </style>
+</HeadContent>
+
+@*클릭 가능한 button 행 추가 - 해당 열에 piece를 놓을 수 있음을 나타냄*@
+<nav>
+    @for (byte i = 0; i < 7; i++)
+    {
+        var col = i;
+        <span title="Click to play a piece" @onclick="() => PlayPiece(col)">🔽</span>
+    }
+</nav>
+
+@*오류 처리 및 지표 추가 - 게임 현재 상태 구체화*@
+<article>
+    @winnerMessage <button style="@ResetStyle" @onclick="ResetGame">Reset the game</button>
+    <br />
+    <span class="alert-danger">@errorMessage</span>
+    <span class="alert-info">@CurrentTurn</span>
+</article>
+
+<div>
+    <div class="board">
+        @for (var i = 0; i < 42; i++)
+        {
+            <span class="container">
+                <span></span>
+            </span>
+        }
+    </div>
+    @for (var i = 0; i < 42; i++)
+    {
+        <span class="@pieces[i]"></span>
+    }
+</div>
+
+@code {
+    private string[] pieces = new string[42];
+    private string winnerMessage = string.Empty;
+    private string errorMessage = string.Empty;
+
+    @*CurrentTurn - winnerMessage || PlayerTurn 속성 기반 자동 계산*@
+    private string CurrentTurn => (winnerMessage == string.Empty) ? $"Player {State.PlayerTurn}'s Turn" : "";
+    @*ResetStyle - winnerMessage 콘텐츠 기반 계산 -> 존재하는 경우 Reset button 표시*@
+    private string ResetStyle => (winnerMessage == string.Empty) ? "display: none;" : "";
+
+    [Parameter]
+    public Color BoardColor { get; set; } = ColorTranslator.FromHtml("yellow");
+
+    [Parameter]
+    public Color Player1Color { get; set; } = ColorTranslator.FromHtml("red");
+
+    [Parameter]
+    public Color Player2Color { get; set; } = ColorTranslator.FromHtml("blue");
+
+    @*1. 제출한 col에서 조각 움직이고, 조각이 놓인 row 캡처하도록 GameState에 지시*@
+    @*2. PlayPiece에 할당할 3개의 CSS 클래스 정의 -> 현재 어떤 플레이어 조작 중인지 식별*@
+    @*3. 이런 클래스를 pieces 배열의 해당 PlayPiece에 할당*@
+    private void PlayPiece(byte col)
+    {
+        errorMessage = string.Empty;
+        try
+        {
+            var player = State.PlayerTurn;
+            var turn = State.CurrentTurn;
+            var landingRow = State.PlayPiece(col);
+            pieces[turn] = $"player{player} col{col} drop{landingRow}";
+        }
+        catch (ArgumentException ex)
+        {
+            errorMessage = ex.Message;
+        }
+
+        @*게임의 winner 결정됐는지 확인하는 switch문*@
+        winnerMessage = State.CheckForWin() switch
+        {
+            GameState.WinState.Player1_Wins => "Player 1 Wins!",
+            GameState.WinState.Player2_Wins => "Player 2 Wins!",
+            GameState.WinState.Tie => "It's a tie!",
+            _ => ""
+        };
+    }
+
+    @*ResetBoard 호출 -> Board 요소 화면에 처음 그려질 때 게임 상태 설정*@
+    protected override void OnInitialized()
+    {
+        State.ResetBoard();
+    }
+
+    @*게임 다시 시작 Button 트리거하는 메서드*@
+    void ResetGame()
+    {
+        State.ResetBoard();
+        winnerMessage = string.Empty;
+        errorMessage = string.Empty;
+        pieces = new string[42];
+    }
+}

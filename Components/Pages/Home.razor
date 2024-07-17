@@ -1,0 +1,7 @@
+﻿@page "/"
+
+<PageTitle>Home</PageTitle>
+
+@*Interactive 렌더링 모드 설정 - WebSocket 연결 -> 서버 구성 요소에 대해 UI 이벤트 처리*@
+<Board @rendermode="InteractiveServer" BoardColor="System.Drawing.Color.Black" Player1Color="System.Drawing.Color.Green"
+    Player2Color="System.Drawing.Color.Purple" />
